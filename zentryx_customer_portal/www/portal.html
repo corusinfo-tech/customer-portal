@@ -1,0 +1,133 @@
+{% extends "templates/web.html" %}
+
+{% block title %}{{ _("Customer Portal") }}{% endblock %}
+
+{% block header %}{% endblock %}
+
+{% block page_content %}
+<main class="zcp-shell" data-page="portal">
+  <aside class="zcp-sidebar" aria-label="{{ _('Portal navigation') }}">
+    <div class="zcp-brand">
+      <div class="zcp-mark">Z</div>
+      <div>
+        <strong>Zentryx</strong>
+        <span>{{ _("Customer Portal") }}</span>
+      </div>
+    </div>
+    <nav class="zcp-nav">
+      <button class="active" data-view="dashboard">{{ _("Dashboard") }}</button>
+      <button data-view="support">{{ _("Support") }}</button>
+      <button data-view="tickets">{{ _("My Tickets") }}</button>
+      <button data-view="knowledge">{{ _("Knowledge Base") }}</button>
+      <button data-view="sales">{{ _("Sales") }}</button>
+      <button data-view="quotations">{{ _("Quotations") }}</button>
+      <button data-view="orders">{{ _("Orders") }}</button>
+      <button data-view="invoices">{{ _("Invoices") }}</button>
+      <button data-view="payments">{{ _("Payments") }}</button>
+      <button data-view="projects">{{ _("Projects") }}</button>
+      <button data-view="amc">{{ _("AMC") }}</button>
+      <button data-view="network">{{ _("Network") }}</button>
+      <button data-view="reports">{{ _("Reports") }}</button>
+      <button data-view="documents">{{ _("Documents") }}</button>
+      <button data-view="profile">{{ _("Profile") }}</button>
+      <a href="/?cmd=web_logout">{{ _("Logout") }}</a>
+    </nav>
+  </aside>
+
+  <section class="zcp-main">
+    <header class="zcp-topbar">
+      <div>
+        <p class="zcp-kicker">{{ _("Welcome") }}</p>
+        <h1 id="zcp-customer-name">{{ _("Customer Portal") }}</h1>
+      </div>
+      <div class="zcp-actions">
+        <label class="zcp-search">
+          <span class="sr-only">{{ _("Search") }}</span>
+          <input id="zcp-search" type="search" placeholder="{{ _('Search invoices, tickets, projects') }}">
+        </label>
+        <button class="zcp-icon-btn" id="zcp-theme" type="button" title="{{ _('Toggle theme') }}">◐</button>
+        <button class="zcp-bell" id="zcp-notifications" type="button" title="{{ _('Notifications') }}">
+          <span>●</span><strong id="zcp-unread">0</strong>
+        </button>
+      </div>
+    </header>
+
+    <section class="zcp-grid" id="zcp-summary"></section>
+
+    <section class="zcp-content">
+      <div class="zcp-panel" data-panel="dashboard">
+        <div class="zcp-panel-head">
+          <h2>{{ _("Recent Activities") }}</h2>
+        </div>
+        <div class="zcp-dashboard-layout">
+          <div>
+            <canvas id="zcp-chart" height="220"></canvas>
+          </div>
+          <div id="zcp-activities" class="zcp-list"></div>
+        </div>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="support">
+        <div class="zcp-panel-head"><h2>{{ _("Create Ticket") }}</h2></div>
+        <form id="zcp-ticket-form" class="zcp-form">
+          <input name="subject" placeholder="{{ _('Subject') }}" required>
+          <select name="priority">
+            <option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option>
+          </select>
+          <textarea name="description" placeholder="{{ _('Describe the issue') }}" rows="6" required></textarea>
+          <button class="zcp-primary" type="submit">{{ _("Create Ticket") }}</button>
+        </form>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="tickets">
+        <div class="zcp-panel-head"><h2>{{ _("My Tickets") }}</h2></div>
+        <div id="zcp-tickets" class="zcp-table"></div>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="quotations">
+        <div class="zcp-panel-head"><h2>{{ _("Quotations") }}</h2></div>
+        <div id="zcp-quotations" class="zcp-table"></div>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="invoices">
+        <div class="zcp-panel-head"><h2>{{ _("Invoices") }}</h2></div>
+        <div id="zcp-invoices" class="zcp-table"></div>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="projects">
+        <div class="zcp-panel-head"><h2>{{ _("Projects") }}</h2></div>
+        <div id="zcp-projects" class="zcp-table"></div>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="amc">
+        <div class="zcp-panel-head"><h2>{{ _("AMC Contracts") }}</h2></div>
+        <div id="zcp-amc" class="zcp-table"></div>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="network">
+        <div class="zcp-panel-head"><h2>{{ _("Network Status") }}</h2></div>
+        <div id="zcp-network" class="zcp-network"></div>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="knowledge">
+        <div class="zcp-panel-head"><h2>{{ _("Knowledge Base") }}</h2></div>
+        <div class="zcp-empty">{{ _("Helpdesk Knowledge Base search is available through global search and can be connected to article categories.") }}</div>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="sales">
+        <div class="zcp-panel-head"><h2>{{ _("Sales") }}</h2></div>
+        <div class="zcp-empty">{{ _("Quotations, orders, invoices and payments are available from the sidebar.") }}</div>
+      </div>
+
+      <div class="zcp-panel d-none" data-panel="orders"><div class="zcp-empty">{{ _("Sales order list uses ERPNext portal permissions and PDF print views.") }}</div></div>
+      <div class="zcp-panel d-none" data-panel="payments"><div class="zcp-empty">{{ _("Payment entries and receipts are available through customer-scoped APIs.") }}</div></div>
+      <div class="zcp-panel d-none" data-panel="reports"><div class="zcp-empty">{{ _("SLA reports and uploaded report files appear under Documents.") }}</div></div>
+      <div class="zcp-panel d-none" data-panel="documents"><div class="zcp-empty">{{ _("Customer documents include invoices, quotations, contracts, project files, reports and configuration backups.") }}</div></div>
+      <div class="zcp-panel d-none" data-panel="profile"><div class="zcp-empty">{{ _("Update contact details, password and notification preferences from your account profile.") }}</div></div>
+    </section>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
+{% endblock %}
+
