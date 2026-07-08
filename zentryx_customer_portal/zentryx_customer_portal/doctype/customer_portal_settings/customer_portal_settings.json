@@ -1,0 +1,39 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "creation": "2026-07-09 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["enable_modules_section", "enable_projects", "enable_amc", "enable_network", "enable_documents", "enable_payments", "enable_knowledge_base", "branding_section", "logo", "theme", "primary_color", "secondary_color", "landing_page", "footer", "support_contact"],
+  "fields": [
+    {"fieldname": "enable_modules_section", "fieldtype": "Section Break", "label": "Enabled Modules"},
+    {"default": "1", "fieldname": "enable_projects", "fieldtype": "Check", "label": "Projects"},
+    {"default": "1", "fieldname": "enable_amc", "fieldtype": "Check", "label": "AMC"},
+    {"default": "1", "fieldname": "enable_network", "fieldtype": "Check", "label": "Network"},
+    {"default": "1", "fieldname": "enable_documents", "fieldtype": "Check", "label": "Documents"},
+    {"default": "1", "fieldname": "enable_payments", "fieldtype": "Check", "label": "Payments"},
+    {"default": "1", "fieldname": "enable_knowledge_base", "fieldtype": "Check", "label": "Knowledge Base"},
+    {"fieldname": "branding_section", "fieldtype": "Section Break", "label": "Branding"},
+    {"fieldname": "logo", "fieldtype": "Attach Image", "label": "Logo"},
+    {"default": "System", "fieldname": "theme", "fieldtype": "Select", "label": "Theme", "options": "System\nLight\nDark"},
+    {"default": "#0f766e", "fieldname": "primary_color", "fieldtype": "Color", "label": "Primary Color"},
+    {"default": "#2563eb", "fieldname": "secondary_color", "fieldtype": "Color", "label": "Secondary Color"},
+    {"default": "/portal", "fieldname": "landing_page", "fieldtype": "Data", "label": "Landing Page"},
+    {"fieldname": "footer", "fieldtype": "Small Text", "label": "Footer"},
+    {"fieldname": "support_contact", "fieldtype": "Data", "label": "Support Contact"}
+  ],
+  "issingle": 1,
+  "links": [],
+  "modified": "2026-07-09 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zentryx Customer Portal",
+  "name": "Customer Portal Settings",
+  "owner": "Administrator",
+  "permissions": [
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1}
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": []
+}
+

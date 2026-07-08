@@ -1,0 +1,25 @@
+[project]
+name = "zentryx_customer_portal"
+authors = [
+    { name = "Zentryx Global Systems Pvt Ltd", email = "support@zentryx.com" }
+]
+description = "Modern customer self-service portal for Frappe, ERPNext, CRM and Helpdesk."
+requires-python = ">=3.12"
+readme = "README.md"
+dynamic = ["version"]
+dependencies = [
+    "frappe>=16.0.0",
+]
+
+[build-system]
+requires = ["flit_core >=3.4,<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.bench.frappe-dependencies]
+frappe = ">=16.0.0"
+erpnext = ">=16.0.0"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
