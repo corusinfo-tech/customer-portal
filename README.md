@@ -5,6 +5,8 @@
 ## Features
 
 - Website-user-only `/portal` dashboard
+- Custom portal identity model independent of ERPNext Portal User permissions
+- Portal Customer, Portal Department, Portal User and configurable Portal Permission Group records
 - Customer-scoped support tickets, invoices, quotations, sales orders, projects, payments and delivery notes
 - Custom DocTypes for AMC contracts, network devices, maintenance schedules, portal announcements, customer documents and SLA reports
 - Bootstrap 5 responsive portal UI with light/dark mode
@@ -41,6 +43,23 @@ bench --site your-site.local run-tests --app zentryx_customer_portal
 ```
 
 This app does not modify ERPNext, CRM or Helpdesk core. All integrations use Frappe hooks, whitelisted methods and standard DocTypes when available.
+
+## Migration To Custom Portal Permissions
+
+Version `0.2.0` introduces a custom portal permission framework. Customer access is resolved from **Portal User** records, not ERPNext's default Portal User to Customer permission model.
+
+After deploying the update to an existing site:
+
+```bash
+bench build --app zentryx_customer_portal
+bench --site your-site.local migrate
+bench --site your-site.local clear-cache
+bench restart
+```
+
+The migration patch creates default permission groups and synchronizes ERPNext Customers and Contacts into Portal Customer and Portal User records. Internal System Users and Administrator can access all portal data without any Customer link.
+
+Customer administrators can manage staff through the Customer Administration APIs and portal UI. ERPNext remains the master source for Customers, Contacts, Addresses, Projects, Accounts, Sales and Helpdesk records.
 
 
 

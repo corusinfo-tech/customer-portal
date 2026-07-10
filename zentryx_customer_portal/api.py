@@ -4,7 +4,13 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate, now_datetime
 
-from zentryx_customer_portal.permissions import get_portal_scope, require_customer
+from zentryx_customer_portal.permissions import (
+    can_manage_customer_staff,
+    get_portal_scope,
+    has_portal_permission,
+    require_portal_permission,
+)
+from zentryx_customer_portal.sync import sync_all
 
 
 def _limit_page_length(limit_page_length=20):
@@ -57,7 +63,7 @@ def tickets(limit_page_length=20):
         fields.extend(["agent_group", "raised_by"])
     return frappe.get_all(
         doctype,
-        filters=_scoped_filters(scope),
+        filters=_ticket_filters(scope),
         fields=fields,
         order_by="modified desc",
         limit_page_length=_limit_page_length(limit_page_length),
@@ -67,6 +73,7 @@ def tickets(limit_page_length=20):
 @frappe.whitelist()
 def create_ticket(subject, description, priority="Medium", customer=None):
     scope = get_portal_scope()
+    require_portal_permission("create_ticket", scope)
     customer = _resolve_ticket_customer(scope, customer)
     doctype = _ticket_doctype()
     doc = frappe.new_doc(doctype)
@@ -77,7 +84,7 @@ def create_ticket(subject, description, priority="Medium", customer=None):
         doc.customer = customer
     if hasattr(doc, "raised_by"):
         doc.raised_by = frappe.session.user
-    doc.insert(ignore_permissions=scope["internal"])
+    doc.insert(ignore_permissions=True)
     frappe.db.commit()
     return {"name": doc.name}
 
@@ -85,6 +92,7 @@ def create_ticket(subject, description, priority="Medium", customer=None):
 @frappe.whitelist()
 def reply_ticket(ticket, message):
     scope = get_portal_scope()
+    require_portal_permission("reply_ticket", scope)
     doctype = _ticket_doctype()
     doc = frappe.get_doc(doctype, ticket)
     if not scope["internal"] and getattr(doc, "customer", None) != scope["customer"]:
@@ -97,6 +105,7 @@ def reply_ticket(ticket, message):
 @frappe.whitelist()
 def invoices(status=None, limit_page_length=20):
     scope = get_portal_scope()
+    require_portal_permission("view_invoices", scope)
     filters = _scoped_filters(scope, {"docstatus": 1})
     if status == "outstanding":
         filters["outstanding_amount"] = [">", 0]
@@ -116,6 +125,7 @@ def invoices(status=None, limit_page_length=20):
 @frappe.whitelist()
 def sales_orders(limit_page_length=20):
     scope = get_portal_scope()
+    require_portal_permission("view_orders", scope)
     return frappe.get_all(
         "Sales Order",
         filters=_scoped_filters(scope, {"docstatus": 1}),
@@ -128,6 +138,7 @@ def sales_orders(limit_page_length=20):
 @frappe.whitelist()
 def payments(limit_page_length=20):
     scope = get_portal_scope()
+    require_portal_permission("view_payments", scope)
     if scope["internal"]:
         return frappe.get_all(
             "Payment Entry",
@@ -156,6 +167,7 @@ def payments(limit_page_length=20):
 @frappe.whitelist()
 def documents(limit_page_length=20):
     scope = get_portal_scope()
+    require_portal_permission("download_documents", scope)
     return frappe.get_all(
         "Customer Document",
         filters=_scoped_filters(scope),
@@ -170,33 +182,26 @@ def update_profile(phone=None, mobile_no=None, notification_preferences=None):
     scope = get_portal_scope()
     if scope["internal"]:
         frappe.throw(_("Internal users should update their profile from Desk."), frappe.PermissionError)
-    customer = require_customer()
-    contact_name = frappe.db.get_value("Contact", {"email_id": frappe.session.user}, "name")
-    if not contact_name:
-        frappe.throw(_("No Contact is linked to your portal account."), frappe.DoesNotExistError)
 
-    linked_customer = frappe.db.get_value(
-        "Dynamic Link",
-        {"parenttype": "Contact", "parent": contact_name, "link_doctype": "Customer"},
-        "link_name",
-    )
-    if linked_customer != customer:
-        frappe.throw(_("Not permitted."), frappe.PermissionError)
+    portal_user = frappe.get_doc("Portal User", scope["portal_user"])
+    if notification_preferences is not None:
+        portal_user.notification_preferences = notification_preferences
+    portal_user.save(ignore_permissions=True)
 
-    contact = frappe.get_doc("Contact", contact_name)
-    if phone is not None:
-        contact.phone = phone
-    if mobile_no is not None:
-        contact.mobile_no = mobile_no
-    if notification_preferences is not None and hasattr(contact, "portal_notification_preferences"):
-        contact.portal_notification_preferences = notification_preferences
-    contact.save(ignore_permissions=False)
+    if portal_user.contact:
+        contact = frappe.get_doc("Contact", portal_user.contact)
+        if phone is not None:
+            contact.phone = phone
+        if mobile_no is not None:
+            contact.mobile_no = mobile_no
+        contact.save(ignore_permissions=True)
     return {"ok": True}
 
 
 @frappe.whitelist()
 def quotations(limit_page_length=20):
     scope = get_portal_scope()
+    require_portal_permission("view_quotations", scope)
     return frappe.get_all(
         "Quotation",
         filters=_scoped_filters(scope, {"quotation_to": "Customer"}, "party_name"),
@@ -229,6 +234,7 @@ def quotation_action(quotation, action, comment=None):
 @frappe.whitelist()
 def projects(limit_page_length=20):
     scope = get_portal_scope()
+    require_portal_permission("view_projects", scope)
     return frappe.get_all(
         "Project",
         filters=_scoped_filters(scope),
@@ -305,6 +311,95 @@ def global_search(q, limit_page_length=10):
     return results[:limit]
 
 
+@frappe.whitelist()
+def portal_customers(limit_page_length=50):
+    scope = get_portal_scope()
+    if scope["internal"]:
+        filters = {}
+    else:
+        filters = {"name": scope["portal_customer"]}
+    return frappe.get_all(
+        "Portal Customer",
+        filters=filters,
+        fields=["name", "customer_name", "erpnext_customer", "status", "primary_email", "primary_mobile"],
+        order_by="customer_name asc",
+        limit_page_length=_limit_page_length(limit_page_length),
+    )
+
+
+@frappe.whitelist()
+def portal_staff(portal_customer=None, limit_page_length=50):
+    scope = get_portal_scope()
+    if scope["internal"]:
+        filters = {"portal_customer": portal_customer} if portal_customer else {}
+    else:
+        require_portal_permission("manage_staff", scope)
+        filters = {"portal_customer": scope["portal_customer"]}
+    return frappe.get_all(
+        "Portal User",
+        filters=filters,
+        fields=["name", "user", "email", "full_name", "user_type", "enabled", "portal_customer", "department", "permission_group"],
+        order_by="full_name asc",
+        limit_page_length=_limit_page_length(limit_page_length),
+    )
+
+
+@frappe.whitelist()
+def invite_staff(email, full_name=None, portal_customer=None, department=None, permission_group=None, user_type="Customer Staff"):
+    scope = get_portal_scope()
+    portal_customer = portal_customer if scope["internal"] else scope["portal_customer"]
+    if not can_manage_customer_staff(scope, portal_customer):
+        frappe.throw(_("Not permitted for this portal account."), frappe.PermissionError)
+
+    if not frappe.db.exists("Portal Customer", portal_customer):
+        frappe.throw(_("Portal Customer is required."), frappe.ValidationError)
+
+    user_name = frappe.db.get_value("User", {"email": email}, "name")
+    if not user_name:
+        user = frappe.new_doc("User")
+        user.email = email
+        user.first_name = full_name or email
+        user.user_type = "Website User"
+        user.send_welcome_email = 1
+        user.insert(ignore_permissions=True)
+        user_name = user.name
+
+    portal_user_name = frappe.db.get_value("Portal User", {"email": email}, "name")
+    doc = frappe.get_doc("Portal User", portal_user_name) if portal_user_name else frappe.new_doc("Portal User")
+    doc.user = user_name
+    doc.email = email
+    doc.full_name = full_name or frappe.db.get_value("User", user_name, "full_name")
+    doc.user_type = user_type
+    doc.enabled = 1
+    doc.portal_customer = portal_customer
+    doc.department = department
+    doc.permission_group = permission_group or doc.permission_group or frappe.db.get_value(
+        "Portal Permission Group", {"group_name": "Ticket User"}, "name"
+    )
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"name": doc.name, "user": user_name}
+
+
+@frappe.whitelist()
+def set_staff_enabled(portal_user, enabled):
+    scope = get_portal_scope()
+    doc = frappe.get_doc("Portal User", portal_user)
+    if not can_manage_customer_staff(scope, doc.portal_customer):
+        frappe.throw(_("Not permitted for this portal account."), frappe.PermissionError)
+    doc.enabled = cint(enabled)
+    doc.save(ignore_permissions=True)
+    return {"ok": True}
+
+
+@frappe.whitelist()
+def sync_customers():
+    scope = get_portal_scope()
+    if not scope["internal"]:
+        frappe.throw(_("Only internal users can run customer synchronization."), frappe.PermissionError)
+    return sync_all("Manual")
+
+
 def announcements():
     return frappe.get_all(
         "Portal Announcement",
@@ -344,6 +439,16 @@ def _scoped_filters(scope, filters=None, customer_field="customer"):
     filters = dict(filters or {})
     if not scope["internal"]:
         filters[customer_field] = scope["customer"]
+    return filters
+
+
+def _ticket_filters(scope):
+    filters = _scoped_filters(scope)
+    if scope["internal"] or has_portal_permission("view_company_tickets", scope):
+        return filters
+    if has_portal_permission("view_department_tickets", scope):
+        return filters
+    filters["raised_by"] = frappe.session.user
     return filters
 
 

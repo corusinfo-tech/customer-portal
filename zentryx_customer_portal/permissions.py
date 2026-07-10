@@ -20,6 +20,9 @@ CUSTOMER_FIELD_BY_DOCTYPE = {
 }
 
 INTERNAL_USER_TYPES = {"System User"}
+CUSTOMER_ADMIN_TYPE = "Customer Company Administrator"
+CUSTOMER_STAFF_TYPE = "Customer Staff"
+CUSTOMER_READ_ONLY_TYPE = "Customer Read Only"
 
 
 def is_internal_user(user: str | None = None) -> bool:
@@ -32,38 +35,15 @@ def is_internal_user(user: str | None = None) -> bool:
 
 
 def get_user_customer(user: str | None = None) -> str | None:
-    user = user or frappe.session.user
-    if user == "Guest" or is_internal_user(user):
-        return None
-
-    contact = frappe.db.get_value("Contact", {"email_id": user}, "name")
-    if not contact:
-        dynamic_link = frappe.qb.DocType("Dynamic Link")
-        rows = (
-            frappe.qb.from_(dynamic_link)
-            .select(dynamic_link.link_name)
-            .where(dynamic_link.parenttype == "Contact")
-            .where(dynamic_link.link_doctype == "Customer")
-            .where(dynamic_link.parent.isin(
-                frappe.get_all("Contact Email", filters={"email_id": user}, pluck="parent")
-            ))
-            .limit(1)
-        ).run(as_dict=True)
-        return _existing_customer(rows[0].link_name) if rows else None
-
-    link = frappe.db.get_value(
-        "Dynamic Link",
-        {"parenttype": "Contact", "parent": contact, "link_doctype": "Customer"},
-        "link_name",
-    )
-    return _existing_customer(link)
+    portal_user = get_portal_user(user)
+    return portal_user.get("erpnext_customer") if portal_user else None
 
 
 def require_customer(user: str | None = None) -> str:
     customer = get_user_customer(user)
     if not customer:
         frappe.throw(
-            _("Your portal account is not linked to an active Customer. Ask your administrator to link your Contact to a valid Customer."),
+            _("Your portal account is not configured. Ask your Customer Administrator to create or enable your Portal User profile."),
             frappe.PermissionError,
         )
     return customer
@@ -72,8 +52,70 @@ def require_customer(user: str | None = None) -> str:
 def get_portal_scope(user: str | None = None) -> dict:
     user = user or frappe.session.user
     if is_internal_user(user):
-        return {"internal": True, "customer": None}
-    return {"internal": False, "customer": require_customer(user)}
+        return {
+            "internal": True,
+            "customer": None,
+            "portal_customer": None,
+            "portal_user": None,
+            "department": None,
+            "user_type": "Internal",
+            "permissions": {},
+        }
+
+    portal_user = get_portal_user(user)
+    if not portal_user:
+        frappe.throw(
+            _("Your portal account is not configured. Ask your Customer Administrator to add your staff profile."),
+            frappe.PermissionError,
+        )
+
+    return {
+        "internal": False,
+        "customer": portal_user.erpnext_customer,
+        "portal_customer": portal_user.portal_customer,
+        "portal_user": portal_user.name,
+        "department": portal_user.department,
+        "user_type": portal_user.user_type,
+        "permissions": _permission_map(portal_user),
+    }
+
+
+def get_portal_user(user: str | None = None):
+    user = user or frappe.session.user
+    if user in ("Guest", None) or is_internal_user(user):
+        return None
+
+    name = frappe.db.get_value("Portal User", {"user": user, "enabled": 1}, "name")
+    if not name:
+        name = frappe.db.get_value("Portal User", {"email": user, "enabled": 1}, "name")
+    if not name:
+        return None
+
+    portal_user = frappe.get_cached_doc("Portal User", name)
+    if not portal_user.portal_customer:
+        return None
+    portal_customer = frappe.get_cached_doc("Portal Customer", portal_user.portal_customer)
+    if portal_customer.status != "Active" or not _existing_customer(portal_customer.erpnext_customer):
+        return None
+    return portal_user
+
+
+def has_portal_permission(permission: str, scope: dict | None = None) -> bool:
+    scope = scope or get_portal_scope()
+    if scope["internal"]:
+        return True
+    if scope["user_type"] == CUSTOMER_ADMIN_TYPE:
+        return True
+    if scope["user_type"] == CUSTOMER_READ_ONLY_TYPE and permission.startswith(("view_", "read_")):
+        return True
+    return bool(scope["permissions"].get(permission))
+
+
+def require_portal_permission(permission: str, scope: dict | None = None):
+    scope = scope or get_portal_scope()
+    if not has_portal_permission(permission, scope):
+        frappe.throw(_("Not permitted for this portal account."), frappe.PermissionError)
+    return scope
 
 
 def get_customer_linked_permission_query_conditions(user: str | None = None) -> str | None:
@@ -183,6 +225,14 @@ def has_customer_permission(doc, user: str | None = None, permission_type: str |
     return False
 
 
+def can_manage_customer_staff(scope: dict, portal_customer: str | None = None) -> bool:
+    if scope["internal"]:
+        return True
+    if not has_portal_permission("manage_staff", scope):
+        return False
+    return not portal_customer or portal_customer == scope["portal_customer"]
+
+
 def _condition_for_customer(doctype: str | None, customer: str) -> str:
     if not doctype or doctype not in CUSTOMER_FIELD_BY_DOCTYPE:
         return "1=0"
@@ -203,6 +253,24 @@ def _existing_customer(customer: str | None) -> str | None:
     if customer and frappe.db.exists("Customer", customer):
         return customer
     return None
+
+
+def _permission_map(portal_user) -> dict:
+    if portal_user.user_type == CUSTOMER_ADMIN_TYPE or portal_user.is_company_admin:
+        return {"manage_staff": True, "view_company_tickets": True, "create_ticket": True, "reply_ticket": True}
+    if portal_user.user_type == CUSTOMER_READ_ONLY_TYPE:
+        return {"view_company_tickets": True, "view_reports": True, "view_sla_reports": True}
+    if not portal_user.permission_group:
+        return {}
+
+    group = frappe.get_cached_doc("Portal Permission Group", portal_user.permission_group)
+    if not group.enabled:
+        return {}
+    return {
+        field.fieldname: bool(group.get(field.fieldname))
+        for field in group.meta.fields
+        if field.fieldtype == "Check"
+    }
 
 
 def _payment_belongs_to_customer(payment_entry: str, customer: str) -> bool:

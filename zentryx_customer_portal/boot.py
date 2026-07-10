@@ -25,8 +25,16 @@ def get_portal_settings():
         "primary_color": settings.primary_color or "#0f766e",
         "secondary_color": settings.secondary_color or "#2563eb",
         "theme": settings.theme or "System",
-        "support_contact": settings.support_contact,
+        "portal_name": settings.portal_name or "Zentryx Customer Portal",
+        "support_email": settings.support_email,
+        "support_phone": settings.support_phone,
         "footer": settings.footer,
+        "security": {
+            "enable_otp": bool(settings.enable_otp),
+            "enable_two_factor_authentication": bool(settings.enable_two_factor_authentication),
+            "enable_sso": bool(settings.enable_sso),
+            "session_timeout": settings.session_timeout,
+        },
         "modules": {
             "projects": bool(settings.enable_projects),
             "amc": bool(settings.enable_amc),
@@ -36,4 +44,3 @@ def get_portal_settings():
             "knowledge_base": bool(settings.enable_knowledge_base),
         },
     }
-

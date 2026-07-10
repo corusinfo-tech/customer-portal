@@ -1,0 +1,31 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "creation": "2026-07-11 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["sync_type", "status", "started_on", "finished_on", "records_created", "records_updated", "message"],
+  "fields": [
+    {"fieldname": "sync_type", "fieldtype": "Select", "in_list_view": 1, "label": "Sync Type", "options": "Manual\nScheduled\nMigration", "reqd": 1},
+    {"fieldname": "status", "fieldtype": "Select", "in_list_view": 1, "label": "Status", "options": "Started\nCompleted\nFailed", "reqd": 1},
+    {"fieldname": "started_on", "fieldtype": "Datetime", "label": "Started On"},
+    {"fieldname": "finished_on", "fieldtype": "Datetime", "label": "Finished On"},
+    {"fieldname": "records_created", "fieldtype": "Int", "label": "Records Created"},
+    {"fieldname": "records_updated", "fieldtype": "Int", "label": "Records Updated"},
+    {"fieldname": "message", "fieldtype": "Long Text", "label": "Message"}
+  ],
+  "links": [],
+  "modified": "2026-07-11 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zentryx Customer Portal",
+  "name": "Portal Sync Log",
+  "owner": "Administrator",
+  "permissions": [
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Customer Portal Manager", "share": 1, "write": 1}
+  ],
+  "sort_field": "started_on",
+  "sort_order": "DESC",
+  "states": []
+}
+

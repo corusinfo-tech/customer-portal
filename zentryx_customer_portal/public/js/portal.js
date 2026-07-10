@@ -7,6 +7,7 @@ class ZentryxPortal {
     this.bindTheme();
     this.bindSearch();
     this.bindTicketForm();
+    this.bindAdministration();
     this.load();
     this.connectRealtime();
   }
@@ -75,6 +76,7 @@ class ZentryxPortal {
       this.loadAmc(),
       this.loadNetwork(),
       this.loadNotifications(),
+      this.loadAdministration(),
     ]);
   }
 
@@ -160,6 +162,40 @@ class ZentryxPortal {
   async loadNotifications() {
     const data = await this.call("notifications");
     document.getElementById("zcp-unread").textContent = data.unread_count || 0;
+  }
+
+  bindAdministration() {
+    document.getElementById("zcp-sync")?.addEventListener("click", async () => {
+      await this.call("sync_customers");
+      this.toast("Customer synchronization completed");
+      await this.loadAdministration();
+    });
+  }
+
+  async loadAdministration() {
+    await Promise.all([this.loadCustomers(), this.loadStaff()]);
+  }
+
+  async loadCustomers() {
+    const target = document.getElementById("zcp-customers");
+    if (!target) return;
+    try {
+      const rows = await this.call("portal_customers");
+      target.innerHTML = rows.map((row) => this.row(row.customer_name, row.status, row.erpnext_customer)).join("");
+    } catch {
+      target.innerHTML = `<div class="zcp-empty">Customer administration is not available for this account.</div>`;
+    }
+  }
+
+  async loadStaff() {
+    const target = document.getElementById("zcp-staff");
+    if (!target) return;
+    try {
+      const rows = await this.call("portal_staff");
+      target.innerHTML = rows.map((row) => this.row(row.full_name || row.email, row.user_type, row.permission_group)).join("");
+    } catch {
+      target.innerHTML = `<div class="zcp-empty">Staff management is not available for this account.</div>`;
+    }
   }
 
   showPanel(name) {

@@ -22,6 +22,13 @@ doctype_js = {}
 fixtures = [
     {"dt": "Role", "filters": [["role_name", "in", ["Customer Portal Manager"]]]},
     {"dt": "Custom DocPerm", "filters": [["parent", "in", [
+        "Portal Customer",
+        "Portal Department",
+        "Portal Permission Group",
+        "Portal User",
+        "Portal Sync Log",
+        "Portal SLA Policy",
+        "Portal Audit Log",
         "AMC Contract",
         "Network Device",
         "Maintenance Schedule",
@@ -40,6 +47,12 @@ website_route_rules = [
 get_website_user_home_page = "zentryx_customer_portal.boot.get_website_user_home_page"
 boot_session = "zentryx_customer_portal.boot.get_bootinfo"
 after_install = "zentryx_customer_portal.install.after_install"
+
+scheduler_events = {
+    "daily": [
+        "zentryx_customer_portal.sync.scheduled_sync",
+    ],
+}
 
 permission_query_conditions = {
     "Sales Invoice": "zentryx_customer_portal.permissions.sales_invoice_query",
