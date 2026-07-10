@@ -49,7 +49,11 @@ class ZentryxPortal {
     document.getElementById("zcp-ticket-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
-      await this.call("create_ticket", Object.fromEntries(form.entries()));
+      const payload = Object.fromEntries(form.entries());
+      Object.keys(payload).forEach((key) => {
+        if (payload[key] === "") delete payload[key];
+      });
+      await this.call("create_ticket", payload);
       event.currentTarget.reset();
       this.toast("Ticket created");
       await this.loadTickets();
@@ -188,4 +192,3 @@ class ZentryxPortal {
 }
 
 document.addEventListener("DOMContentLoaded", () => new ZentryxPortal());
-

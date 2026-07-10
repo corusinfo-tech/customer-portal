@@ -4,7 +4,7 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt, getdate, now_datetime
 
-from zentryx_customer_portal.permissions import require_customer
+from zentryx_customer_portal.permissions import get_portal_scope, require_customer
 
 
 def _limit_page_length(limit_page_length=20):
@@ -17,28 +17,32 @@ def _ticket_doctype():
 
 @frappe.whitelist()
 def dashboard_summary():
-    customer = require_customer()
+    scope = get_portal_scope()
+    customer = scope["customer"]
     ticket_dt = _ticket_doctype()
-    open_ticket_filters = {"customer": customer, "status": ["not in", ["Closed", "Resolved"]]}
-    closed_ticket_filters = {"customer": customer, "status": ["in", ["Closed", "Resolved"]]}
+    open_ticket_filters = _scoped_filters(scope, {"status": ["not in", ["Closed", "Resolved"]]})
+    closed_ticket_filters = _scoped_filters(scope, {"status": ["in", ["Closed", "Resolved"]]})
 
     summary = {
         "customer": customer,
-        "customer_name": frappe.db.get_value("Customer", customer, "customer_name") or customer,
-        "outstanding_amount": _sum("Sales Invoice", "outstanding_amount", {"customer": customer, "docstatus": 1}),
+        "customer_name": _scope_title(scope),
+        "outstanding_amount": _sum("Sales Invoice", "outstanding_amount", _scoped_filters(scope, {"docstatus": 1})),
         "open_tickets": frappe.db.count(ticket_dt, open_ticket_filters),
         "closed_tickets": frappe.db.count(ticket_dt, closed_ticket_filters),
         "pending_quotations": frappe.db.count(
-            "Quotation", {"quotation_to": "Customer", "party_name": customer, "status": ["not in", ["Ordered", "Lost"]]}
+            "Quotation",
+            _scoped_filters(scope, {"quotation_to": "Customer", "status": ["not in", ["Ordered", "Lost"]]}, "party_name"),
         ),
-        "active_projects": frappe.db.count("Project", {"customer": customer, "status": ["not in", ["Completed", "Cancelled"]]}),
+        "active_projects": frappe.db.count(
+            "Project", _scoped_filters(scope, {"status": ["not in", ["Completed", "Cancelled"]]})
+        ),
         "amc_expiry": frappe.db.get_value(
             "AMC Contract",
-            {"customer": customer, "status": "Active"},
+            _scoped_filters(scope, {"status": "Active"}),
             "end_date",
             order_by="end_date asc",
         ),
-        "recent_activities": recent_activities(customer),
+        "recent_activities": recent_activities(scope),
         "announcements": announcements(),
     }
     return summary
@@ -46,14 +50,14 @@ def dashboard_summary():
 
 @frappe.whitelist()
 def tickets(limit_page_length=20):
-    customer = require_customer()
+    scope = get_portal_scope()
     doctype = _ticket_doctype()
     fields = ["name", "subject", "status", "priority", "creation", "modified"]
     if doctype == "HD Ticket":
         fields.extend(["agent_group", "raised_by"])
     return frappe.get_all(
         doctype,
-        filters={"customer": customer},
+        filters=_scoped_filters(scope),
         fields=fields,
         order_by="modified desc",
         limit_page_length=_limit_page_length(limit_page_length),
@@ -61,27 +65,29 @@ def tickets(limit_page_length=20):
 
 
 @frappe.whitelist()
-def create_ticket(subject, description, priority="Medium"):
-    customer = require_customer()
+def create_ticket(subject, description, priority="Medium", customer=None):
+    scope = get_portal_scope()
+    customer = _resolve_ticket_customer(scope, customer)
     doctype = _ticket_doctype()
     doc = frappe.new_doc(doctype)
     doc.subject = subject
     doc.description = description
     doc.priority = priority
-    doc.customer = customer
+    if customer and hasattr(doc, "customer"):
+        doc.customer = customer
     if hasattr(doc, "raised_by"):
         doc.raised_by = frappe.session.user
-    doc.insert(ignore_permissions=False)
+    doc.insert(ignore_permissions=scope["internal"])
     frappe.db.commit()
     return {"name": doc.name}
 
 
 @frappe.whitelist()
 def reply_ticket(ticket, message):
-    customer = require_customer()
+    scope = get_portal_scope()
     doctype = _ticket_doctype()
     doc = frappe.get_doc(doctype, ticket)
-    if getattr(doc, "customer", None) != customer:
+    if not scope["internal"] and getattr(doc, "customer", None) != scope["customer"]:
         frappe.throw(_("Not permitted."), frappe.PermissionError)
     doc.add_comment("Comment", text=message)
     frappe.publish_realtime("zentryx_portal_notification", {"doctype": doctype, "name": ticket}, user=frappe.session.user)
@@ -90,8 +96,8 @@ def reply_ticket(ticket, message):
 
 @frappe.whitelist()
 def invoices(status=None, limit_page_length=20):
-    customer = require_customer()
-    filters = {"customer": customer, "docstatus": 1}
+    scope = get_portal_scope()
+    filters = _scoped_filters(scope, {"docstatus": 1})
     if status == "outstanding":
         filters["outstanding_amount"] = [">", 0]
     elif status == "paid":
@@ -109,10 +115,10 @@ def invoices(status=None, limit_page_length=20):
 
 @frappe.whitelist()
 def sales_orders(limit_page_length=20):
-    customer = require_customer()
+    scope = get_portal_scope()
     return frappe.get_all(
         "Sales Order",
-        filters={"customer": customer, "docstatus": 1},
+        filters=_scoped_filters(scope, {"docstatus": 1}),
         fields=["name", "transaction_date", "delivery_date", "grand_total", "status", "per_billed"],
         order_by="transaction_date desc",
         limit_page_length=_limit_page_length(limit_page_length),
@@ -121,7 +127,16 @@ def sales_orders(limit_page_length=20):
 
 @frappe.whitelist()
 def payments(limit_page_length=20):
-    customer = require_customer()
+    scope = get_portal_scope()
+    if scope["internal"]:
+        return frappe.get_all(
+            "Payment Entry",
+            filters={"docstatus": 1},
+            fields=["name", "posting_date", "paid_amount", "status"],
+            order_by="posting_date desc",
+            limit_page_length=_limit_page_length(limit_page_length),
+        )
+    customer = scope["customer"]
     return frappe.db.sql(
         """
         select distinct pe.name, pe.posting_date, pe.paid_amount, pe.status, per.reference_doctype, per.reference_name
@@ -140,10 +155,10 @@ def payments(limit_page_length=20):
 
 @frappe.whitelist()
 def documents(limit_page_length=20):
-    customer = require_customer()
+    scope = get_portal_scope()
     return frappe.get_all(
         "Customer Document",
-        filters={"customer": customer},
+        filters=_scoped_filters(scope),
         fields=["name", "title", "document_type", "reference_doctype", "reference_name", "file", "expires_on"],
         order_by="modified desc",
         limit_page_length=_limit_page_length(limit_page_length),
@@ -152,6 +167,9 @@ def documents(limit_page_length=20):
 
 @frappe.whitelist()
 def update_profile(phone=None, mobile_no=None, notification_preferences=None):
+    scope = get_portal_scope()
+    if scope["internal"]:
+        frappe.throw(_("Internal users should update their profile from Desk."), frappe.PermissionError)
     customer = require_customer()
     contact_name = frappe.db.get_value("Contact", {"email_id": frappe.session.user}, "name")
     if not contact_name:
@@ -178,10 +196,10 @@ def update_profile(phone=None, mobile_no=None, notification_preferences=None):
 
 @frappe.whitelist()
 def quotations(limit_page_length=20):
-    customer = require_customer()
+    scope = get_portal_scope()
     return frappe.get_all(
         "Quotation",
-        filters={"quotation_to": "Customer", "party_name": customer},
+        filters=_scoped_filters(scope, {"quotation_to": "Customer"}, "party_name"),
         fields=["name", "transaction_date", "valid_till", "grand_total", "status"],
         order_by="transaction_date desc",
         limit_page_length=_limit_page_length(limit_page_length),
@@ -190,9 +208,9 @@ def quotations(limit_page_length=20):
 
 @frappe.whitelist()
 def quotation_action(quotation, action, comment=None):
-    customer = require_customer()
+    scope = get_portal_scope()
     doc = frappe.get_doc("Quotation", quotation)
-    if doc.quotation_to != "Customer" or doc.party_name != customer:
+    if not scope["internal"] and (doc.quotation_to != "Customer" or doc.party_name != scope["customer"]):
         frappe.throw(_("Not permitted."), frappe.PermissionError)
     if action == "accept":
         doc.status = "Ordered"
@@ -210,10 +228,10 @@ def quotation_action(quotation, action, comment=None):
 
 @frappe.whitelist()
 def projects(limit_page_length=20):
-    customer = require_customer()
+    scope = get_portal_scope()
     return frappe.get_all(
         "Project",
-        filters={"customer": customer},
+        filters=_scoped_filters(scope),
         fields=["name", "project_name", "status", "percent_complete", "expected_end_date"],
         order_by="modified desc",
         limit_page_length=_limit_page_length(limit_page_length),
@@ -222,10 +240,10 @@ def projects(limit_page_length=20):
 
 @frappe.whitelist()
 def amc(limit_page_length=20):
-    customer = require_customer()
+    scope = get_portal_scope()
     return frappe.get_all(
         "AMC Contract",
-        filters={"customer": customer},
+        filters=_scoped_filters(scope),
         fields=["name", "contract_number", "start_date", "end_date", "coverage", "sla", "status", "engineer", "renewal_date"],
         order_by="end_date asc",
         limit_page_length=_limit_page_length(limit_page_length),
@@ -234,10 +252,10 @@ def amc(limit_page_length=20):
 
 @frappe.whitelist()
 def network_status():
-    customer = require_customer()
+    scope = get_portal_scope()
     devices = frappe.get_all(
         "Network Device",
-        filters={"customer": customer},
+        filters=_scoped_filters(scope),
         fields=["name", "hostname", "vendor", "model", "serial_number", "warranty", "location", "status"],
         order_by="hostname asc",
         limit_page_length=100,
@@ -255,11 +273,11 @@ def network_status():
 
 @frappe.whitelist()
 def notifications(limit_page_length=20):
-    customer = require_customer()
+    scope = get_portal_scope()
     rows = announcements()
     schedules = frappe.get_all(
         "Maintenance Schedule",
-        filters={"customer": customer, "status": ["in", ["Planned", "In Progress"]]},
+        filters=_scoped_filters(scope, {"status": ["in", ["Planned", "In Progress"]]}),
         fields=["name", "title", "scheduled_start", "scheduled_end", "status"],
         order_by="scheduled_start asc",
         limit_page_length=_limit_page_length(limit_page_length),
@@ -269,15 +287,15 @@ def notifications(limit_page_length=20):
 
 @frappe.whitelist()
 def global_search(q, limit_page_length=10):
-    customer = require_customer()
+    scope = get_portal_scope()
     term = f"%{q}%"
     limit = _limit_page_length(limit_page_length)
     results = []
     search_specs = [
-        ("Sales Invoice", {"customer": customer}, ["name", "status"]),
-        ("Quotation", {"quotation_to": "Customer", "party_name": customer}, ["name", "status"]),
-        ("Project", {"customer": customer}, ["name", "project_name", "status"]),
-        (_ticket_doctype(), {"customer": customer}, ["name", "subject", "status"]),
+        ("Sales Invoice", _scoped_filters(scope), ["name", "status"]),
+        ("Quotation", _scoped_filters(scope, {"quotation_to": "Customer"}, "party_name"), ["name", "status"]),
+        ("Project", _scoped_filters(scope), ["name", "project_name", "status"]),
+        (_ticket_doctype(), _scoped_filters(scope), ["name", "subject", "status"]),
     ]
     for doctype, filters, fields in search_specs:
         filters["name"] = ["like", term]
@@ -297,13 +315,13 @@ def announcements():
     )
 
 
-def recent_activities(customer):
+def recent_activities(scope):
     rows = []
     for doctype, filters, title_field in [
-        ("Sales Invoice", {"customer": customer, "docstatus": 1}, "name"),
-        ("Quotation", {"quotation_to": "Customer", "party_name": customer}, "name"),
-        (_ticket_doctype(), {"customer": customer}, "subject"),
-        ("Project", {"customer": customer}, "project_name"),
+        ("Sales Invoice", _scoped_filters(scope, {"docstatus": 1}), "name"),
+        ("Quotation", _scoped_filters(scope, {"quotation_to": "Customer"}, "party_name"), "name"),
+        (_ticket_doctype(), _scoped_filters(scope), "subject"),
+        ("Project", _scoped_filters(scope), "project_name"),
     ]:
         for row in frappe.get_all(
             doctype,
@@ -320,3 +338,27 @@ def recent_activities(customer):
 def _sum(doctype, fieldname, filters):
     value = frappe.db.get_value(doctype, filters, f"sum({fieldname})")
     return flt(value)
+
+
+def _scoped_filters(scope, filters=None, customer_field="customer"):
+    filters = dict(filters or {})
+    if not scope["internal"]:
+        filters[customer_field] = scope["customer"]
+    return filters
+
+
+def _scope_title(scope):
+    if scope["internal"]:
+        return _("All Organisations")
+    customer = scope["customer"]
+    return frappe.db.get_value("Customer", customer, "customer_name") or customer
+
+
+def _resolve_ticket_customer(scope, requested_customer=None):
+    if scope["internal"]:
+        if not requested_customer:
+            return None
+        if not frappe.db.exists("Customer", requested_customer):
+            frappe.throw(_("Could not find Customer: {0}").format(requested_customer), frappe.DoesNotExistError)
+        return requested_customer
+    return scope["customer"]

@@ -19,10 +19,21 @@ CUSTOMER_FIELD_BY_DOCTYPE = {
     "SLA Report": "customer",
 }
 
+INTERNAL_USER_TYPES = {"System User"}
+
+
+def is_internal_user(user: str | None = None) -> bool:
+    user = user or frappe.session.user
+    if user == "Administrator":
+        return True
+    if user in ("Guest", None):
+        return False
+    return frappe.db.get_value("User", user, "user_type") in INTERNAL_USER_TYPES
+
 
 def get_user_customer(user: str | None = None) -> str | None:
     user = user or frappe.session.user
-    if user in ("Guest", "Administrator"):
+    if user == "Guest" or is_internal_user(user):
         return None
 
     contact = frappe.db.get_value("Contact", {"email_id": user}, "name")
@@ -38,24 +49,36 @@ def get_user_customer(user: str | None = None) -> str | None:
             ))
             .limit(1)
         ).run(as_dict=True)
-        return rows[0].link_name if rows else None
+        return _existing_customer(rows[0].link_name) if rows else None
 
     link = frappe.db.get_value(
         "Dynamic Link",
         {"parenttype": "Contact", "parent": contact, "link_doctype": "Customer"},
         "link_name",
     )
-    return link
+    return _existing_customer(link)
 
 
 def require_customer(user: str | None = None) -> str:
     customer = get_user_customer(user)
     if not customer:
-        frappe.throw(_("Your portal account is not linked to a Customer."), frappe.PermissionError)
+        frappe.throw(
+            _("Your portal account is not linked to an active Customer. Ask your administrator to link your Contact to a valid Customer."),
+            frappe.PermissionError,
+        )
     return customer
 
 
-def get_customer_linked_permission_query_conditions(user: str | None = None) -> str:
+def get_portal_scope(user: str | None = None) -> dict:
+    user = user or frappe.session.user
+    if is_internal_user(user):
+        return {"internal": True, "customer": None}
+    return {"internal": False, "customer": require_customer(user)}
+
+
+def get_customer_linked_permission_query_conditions(user: str | None = None) -> str | None:
+    if is_internal_user(user):
+        return None
     customer = get_user_customer(user)
     if not customer:
         return "1=0"
@@ -72,6 +95,8 @@ def sales_order_query(user=None):
 
 
 def quotation_query(user=None):
+    if is_internal_user(user):
+        return None
     customer = get_user_customer(user)
     if not customer:
         return "1=0"
@@ -103,6 +128,8 @@ def sla_report_query(user=None):
 
 
 def get_payment_permission_query_conditions(user: str | None = None) -> str:
+    if is_internal_user(user):
+        return None
     customer = get_user_customer(user)
     if not customer:
         return "1=0"
@@ -116,6 +143,8 @@ def get_payment_permission_query_conditions(user: str | None = None) -> str:
 
 
 def get_project_permission_query_conditions(user: str | None = None) -> str:
+    if is_internal_user(user):
+        return None
     customer = get_user_customer(user)
     if not customer:
         return "1=0"
@@ -123,6 +152,8 @@ def get_project_permission_query_conditions(user: str | None = None) -> str:
 
 
 def get_ticket_permission_query_conditions(user: str | None = None) -> str:
+    if is_internal_user(user):
+        return None
     customer = get_user_customer(user)
     if not customer:
         return "1=0"
@@ -133,7 +164,7 @@ def get_ticket_permission_query_conditions(user: str | None = None) -> str:
 
 
 def has_customer_permission(doc, user: str | None = None, permission_type: str | None = None) -> bool:
-    if user == "Administrator":
+    if is_internal_user(user):
         return True
     customer = get_user_customer(user)
     if not customer:
@@ -160,10 +191,18 @@ def _condition_for_customer(doctype: str | None, customer: str) -> str:
 
 
 def _query_for(doctype: str, user: str | None = None) -> str:
+    if is_internal_user(user):
+        return None
     customer = get_user_customer(user)
     if not customer:
         return "1=0"
     return _condition_for_customer(doctype, customer)
+
+
+def _existing_customer(customer: str | None) -> str | None:
+    if customer and frappe.db.exists("Customer", customer):
+        return customer
+    return None
 
 
 def _payment_belongs_to_customer(payment_entry: str, customer: str) -> bool:

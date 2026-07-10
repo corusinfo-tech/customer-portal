@@ -71,6 +71,7 @@
         <div class="zcp-panel-head"><h2>{{ _("Create Ticket") }}</h2></div>
         <form id="zcp-ticket-form" class="zcp-form">
           <input name="subject" placeholder="{{ _('Subject') }}" required>
+          <input name="customer" placeholder="{{ _('Customer ID for staff users') }}">
           <select name="priority">
             <option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option>
           </select>
@@ -130,4 +131,3 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
 {% endblock %}
-
