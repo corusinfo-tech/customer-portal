@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import frappe
 from frappe import _
+from frappe.query_builder.functions import Sum
 from frappe.utils import cint, flt, getdate, now_datetime
 
 from zentryx_customer_portal.permissions import (
@@ -496,8 +497,35 @@ def recent_activities(scope):
 
 
 def _sum(doctype, fieldname, filters):
-    value = frappe.db.get_value(doctype, filters, f"sum({fieldname})")
-    return flt(value)
+    table = frappe.qb.DocType(doctype)
+    query = frappe.qb.from_(table).select(Sum(table[fieldname]).as_("total"))
+    for key, value in (filters or {}).items():
+        query = _apply_qb_filter(query, table, key, value)
+    result = query.run(as_dict=True)
+    return flt(result[0].total if result else 0)
+
+
+def _apply_qb_filter(query, table, key, value):
+    field = table[key]
+    if isinstance(value, (list, tuple)) and len(value) == 2:
+        operator, operand = value
+        if operator == "=":
+            return query.where(field == operand)
+        if operator == "!=":
+            return query.where(field != operand)
+        if operator == ">":
+            return query.where(field > operand)
+        if operator == ">=":
+            return query.where(field >= operand)
+        if operator == "<":
+            return query.where(field < operand)
+        if operator == "<=":
+            return query.where(field <= operand)
+        if operator == "in":
+            return query.where(field.isin(operand))
+        if operator == "not in":
+            return query.where(field.notin(operand))
+    return query.where(field == value)
 
 
 def _scoped_filters(scope, filters=None, customer_field="customer"):
