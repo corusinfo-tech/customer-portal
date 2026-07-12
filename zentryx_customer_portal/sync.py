@@ -15,7 +15,13 @@ def sync_all(sync_type="Manual"):
         contact_result = sync_contacts()
         created += contact_result["created"]
         updated += contact_result["updated"]
-        _finish_log(log, "Completed", created, updated, "Customer and contact sync completed.")
+        address_result = sync_addresses()
+        created += address_result["created"]
+        updated += address_result["updated"]
+        company_result = sync_companies()
+        created += company_result["created"]
+        updated += company_result["updated"]
+        _finish_log(log, "Completed", created, updated, "Customer, contact, address and company sync completed.")
         return {"created": created, "updated": updated}
     except Exception as exc:
         _finish_log(log, "Failed", created, updated, frappe.get_traceback())
@@ -87,6 +93,32 @@ def sync_contacts():
     return {"created": created, "updated": updated}
 
 
+def sync_addresses():
+    updated = 0
+    address_names = frappe.get_all("Address", pluck="name") if frappe.db.exists("DocType", "Address") else []
+    for address_name in address_names:
+        customer = frappe.db.get_value(
+            "Dynamic Link",
+            {"parenttype": "Address", "parent": address_name, "link_doctype": "Customer"},
+            "link_name",
+        )
+        if not customer:
+            continue
+        portal_customer = frappe.db.get_value("Portal Customer", {"erpnext_customer": customer}, "name")
+        if not portal_customer:
+            continue
+        # ERPNext remains the address source of truth; this marks the portal customer as recently synchronized.
+        frappe.db.set_value("Portal Customer", portal_customer, "last_synced_on", now_datetime(), update_modified=False)
+        updated += 1
+    frappe.db.commit()
+    return {"created": 0, "updated": updated}
+
+
+def sync_companies():
+    # ERPNext Customer is the company master for portal purposes. Kept as a separate hook for future CRM Company support.
+    return {"created": 0, "updated": 0}
+
+
 def migrate_existing_portal_users():
     return sync_all("Migration")
 
@@ -139,4 +171,3 @@ def _finish_log(log_name, status, created, updated, message):
     doc.message = message
     doc.save(ignore_permissions=True)
     frappe.db.commit()
-

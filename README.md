@@ -46,7 +46,7 @@ This app does not modify ERPNext, CRM or Helpdesk core. All integrations use Fra
 
 ## Migration To Custom Portal Permissions
 
-Version `0.2.0` introduces a custom portal permission framework. Customer access is resolved from **Portal User** records, not ERPNext's default Portal User to Customer permission model.
+Version `0.3.0` introduces the consolidated custom portal permission framework. Customer access is resolved from **Portal User** records, not ERPNext's default Portal User to Customer permission model.
 
 After deploying the update to an existing site:
 

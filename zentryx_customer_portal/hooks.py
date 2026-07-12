@@ -47,6 +47,7 @@ website_route_rules = [
 get_website_user_home_page = "zentryx_customer_portal.boot.get_website_user_home_page"
 boot_session = "zentryx_customer_portal.boot.get_bootinfo"
 after_install = "zentryx_customer_portal.install.after_install"
+after_migrate = "zentryx_customer_portal.install.after_migrate"
 
 scheduler_events = {
     "daily": [

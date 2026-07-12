@@ -345,6 +345,57 @@ def portal_staff(portal_customer=None, limit_page_length=50):
 
 
 @frappe.whitelist()
+def portal_departments(portal_customer=None, limit_page_length=50):
+    scope = get_portal_scope()
+    if scope["internal"]:
+        filters = {"portal_customer": portal_customer} if portal_customer else {}
+    else:
+        filters = {"portal_customer": scope["portal_customer"]}
+    return frappe.get_all(
+        "Portal Department",
+        filters=filters,
+        fields=["name", "portal_customer", "department_name", "manager", "enabled"],
+        order_by="department_name asc",
+        limit_page_length=_limit_page_length(limit_page_length),
+    )
+
+
+@frappe.whitelist()
+def save_department(department_name, portal_customer=None, department=None, manager=None, enabled=1):
+    scope = get_portal_scope()
+    portal_customer = portal_customer if scope["internal"] else scope["portal_customer"]
+    if not scope["internal"]:
+        require_portal_permission("manage_departments", scope)
+    if not frappe.db.exists("Portal Customer", portal_customer):
+        frappe.throw(_("Portal Customer is required."), frappe.ValidationError)
+
+    doc = frappe.get_doc("Portal Department", department) if department else frappe.new_doc("Portal Department")
+    if not scope["internal"] and doc.name and doc.portal_customer != scope["portal_customer"]:
+        frappe.throw(_("Not permitted for this portal account."), frappe.PermissionError)
+    doc.portal_customer = portal_customer
+    doc.department_name = department_name
+    doc.manager = manager
+    doc.enabled = cint(enabled)
+    doc.save(ignore_permissions=True)
+    frappe.db.commit()
+    return {"name": doc.name}
+
+
+@frappe.whitelist()
+def permission_groups(limit_page_length=100):
+    scope = get_portal_scope()
+    if not scope["internal"] and not has_portal_permission("manage_permissions", scope):
+        frappe.throw(_("Not permitted for this portal account."), frappe.PermissionError)
+    return frappe.get_all(
+        "Portal Permission Group",
+        filters={"enabled": 1},
+        fields=["name", "group_name", "read_only", "create_ticket", "reply_ticket", "view_company_tickets", "view_invoices"],
+        order_by="group_name asc",
+        limit_page_length=_limit_page_length(limit_page_length),
+    )
+
+
+@frappe.whitelist()
 def invite_staff(email, full_name=None, portal_customer=None, department=None, permission_group=None, user_type="Customer Staff"):
     scope = get_portal_scope()
     portal_customer = portal_customer if scope["internal"] else scope["portal_customer"]
@@ -389,6 +440,20 @@ def set_staff_enabled(portal_user, enabled):
         frappe.throw(_("Not permitted for this portal account."), frappe.PermissionError)
     doc.enabled = cint(enabled)
     doc.save(ignore_permissions=True)
+    return {"ok": True}
+
+
+@frappe.whitelist()
+def reset_staff_password(portal_user):
+    scope = get_portal_scope()
+    doc = frappe.get_doc("Portal User", portal_user)
+    if not can_manage_customer_staff(scope, doc.portal_customer):
+        frappe.throw(_("Not permitted for this portal account."), frappe.PermissionError)
+    if not doc.user:
+        frappe.throw(_("No Frappe User is linked to this Portal User."), frappe.ValidationError)
+    from frappe.core.doctype.user.user import reset_password
+
+    reset_password(doc.user)
     return {"ok": True}
 
 

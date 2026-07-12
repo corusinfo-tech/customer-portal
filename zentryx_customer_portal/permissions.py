@@ -104,8 +104,6 @@ def has_portal_permission(permission: str, scope: dict | None = None) -> bool:
     scope = scope or get_portal_scope()
     if scope["internal"]:
         return True
-    if scope["user_type"] == CUSTOMER_ADMIN_TYPE:
-        return True
     if scope["user_type"] == CUSTOMER_READ_ONLY_TYPE and permission.startswith(("view_", "read_")):
         return True
     return bool(scope["permissions"].get(permission))
@@ -256,21 +254,44 @@ def _existing_customer(customer: str | None) -> str | None:
 
 
 def _permission_map(portal_user) -> dict:
-    if portal_user.user_type == CUSTOMER_ADMIN_TYPE or portal_user.is_company_admin:
-        return {"manage_staff": True, "view_company_tickets": True, "create_ticket": True, "reply_ticket": True}
     if portal_user.user_type == CUSTOMER_READ_ONLY_TYPE:
         return {"view_company_tickets": True, "view_reports": True, "view_sla_reports": True}
-    if not portal_user.permission_group:
-        return {}
+    permissions = {}
 
-    group = frappe.get_cached_doc("Portal Permission Group", portal_user.permission_group)
-    if not group.enabled:
-        return {}
-    return {
-        field.fieldname: bool(group.get(field.fieldname))
-        for field in group.meta.fields
-        if field.fieldtype == "Check"
-    }
+    if portal_user.permission_group:
+        group = frappe.get_cached_doc("Portal Permission Group", portal_user.permission_group)
+        if group.enabled:
+            permissions.update(
+                {
+                    field.fieldname: bool(group.get(field.fieldname))
+                    for field in group.meta.fields
+                    if field.fieldtype == "Check"
+                }
+            )
+
+    if portal_user.user_type == CUSTOMER_ADMIN_TYPE or portal_user.is_company_admin:
+        permissions.update(
+            {
+                "create_ticket": True,
+                "reply_ticket": True,
+                "upload_attachments": True,
+                "view_company_tickets": True,
+                "view_quotations": True,
+                "view_orders": True,
+                "view_invoices": True,
+                "view_payments": True,
+                "view_projects": True,
+                "view_reports": True,
+                "view_sla_reports": True,
+                "download_documents": True,
+                "view_knowledge_base": True,
+                "manage_staff": True,
+                "manage_departments": True,
+                "manage_permissions": True,
+                "manage_notifications": True,
+            }
+        )
+    return permissions
 
 
 def _payment_belongs_to_customer(payment_entry: str, customer: str) -> bool:
