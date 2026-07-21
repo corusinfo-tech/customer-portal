@@ -46,7 +46,9 @@ This app does not modify ERPNext, CRM or Helpdesk core. All integrations use Fra
 
 ## Migration To Custom Portal Permissions
 
-Version `0.3.0` introduces the consolidated custom portal permission framework. Customer access is resolved from **Portal User** records, not ERPNext's default Portal User to Customer permission model.
+Version `0.4.0` adds department-aware internal access and customer-aware ticketing. Normal Frappe `System User` accounts no longer receive unrestricted portal access automatically; internal employees require an enabled **Internal Portal User** profile unless they are privileged administrators.
+
+Portal-created tickets now require a Service Department and write **Portal Ticket Metadata** for customer, department, requester, routing and merge/audit context. Internal ticket creation requires a selected Portal Customer, and the server validates allowed-customer and service-department restrictions.
 
 After deploying the update to an existing site:
 
@@ -57,7 +59,8 @@ bench --site your-site.local clear-cache
 bench restart
 ```
 
-The migration patch creates default permission groups and synchronizes ERPNext Customers and Contacts into Portal Customer and Portal User records. Internal System Users and Administrator can access all portal data without any Customer link.
+The migration creates default permission groups and synchronizes ERPNext Customers and Contacts into Portal Customer and Portal User records. Administrator and privileged portal managers can access all portal data; ordinary System Users must have an enabled Internal Portal User profile.
+The `0.4.0` migration creates default service departments and internal/customer permission groups when missing. It does not overwrite customized permission groups.
 
 Customer administrators can manage staff through the Customer Administration APIs and portal UI. ERPNext remains the master source for Customers, Contacts, Addresses, Projects, Accounts, Sales and Helpdesk records.
 

@@ -1,6 +1,6 @@
 from frappe.model.document import Document
 
 
-class CustomerDocument(Document):
+class PortalServiceDepartment(Document):
     pass
 

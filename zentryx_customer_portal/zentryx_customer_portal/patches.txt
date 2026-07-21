@@ -1,1 +1,0 @@
-# Patches run in order by Frappe during migrate.

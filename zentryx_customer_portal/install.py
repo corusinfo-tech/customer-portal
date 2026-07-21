@@ -4,12 +4,14 @@ import frappe
 def after_install():
     ensure_role()
     ensure_settings()
+    ensure_service_departments()
     ensure_permission_groups()
 
 
 def after_migrate():
     ensure_role()
     ensure_settings()
+    ensure_service_departments()
     ensure_permission_groups()
     sync_existing_master_data()
 
@@ -61,6 +63,24 @@ def ensure_permission_groups():
             "view_knowledge_base": 1,
             "download_documents": 1,
         },
+        "Customer Technical Support User": {
+            "create_ticket": 1,
+            "reply_ticket": 1,
+            "upload_attachments": 1,
+            "view_own_tickets": 1,
+            "view_department_tickets": 1,
+            "view_knowledge_base": 1,
+        },
+        "Customer Accounts User": {
+            "create_ticket": 1,
+            "reply_ticket": 1,
+            "view_own_tickets": 1,
+            "view_department_tickets": 1,
+            "view_quotations": 1,
+            "view_orders": 1,
+            "view_invoices": 1,
+            "view_payments": 1,
+        },
         "Ticket Manager": {
             "create_ticket": 1,
             "reply_ticket": 1,
@@ -84,6 +104,7 @@ def ensure_permission_groups():
             "view_projects": 1,
             "view_tasks": 1,
             "view_timesheets": 1,
+            "view_amc": 1,
         },
         "Reports": {
             "view_reports": 1,
@@ -116,6 +137,67 @@ def ensure_permission_groups():
             "manage_permissions": 1,
             "manage_notifications": 1,
         },
+        "Internal Portal Administrator": {
+            "internal_only": 1,
+            "create_ticket": 1,
+            "reply_ticket": 1,
+            "upload_attachments": 1,
+            "view_company_tickets": 1,
+            "assign_ticket": 1,
+            "escalate_ticket": 1,
+            "close_ticket": 1,
+            "merge_ticket": 1,
+            "reopen_ticket": 1,
+            "view_quotations": 1,
+            "view_orders": 1,
+            "view_invoices": 1,
+            "view_payments": 1,
+            "view_projects": 1,
+            "view_amc": 1,
+            "view_reports": 1,
+            "view_sla_reports": 1,
+            "manage_staff": 1,
+            "manage_departments": 1,
+            "manage_permissions": 1,
+            "manage_internal_users": 1,
+        },
+        "Internal Technical Support": {
+            "internal_only": 1,
+            "create_ticket": 1,
+            "reply_ticket": 1,
+            "upload_attachments": 1,
+            "view_company_tickets": 1,
+            "assign_ticket": 1,
+            "escalate_ticket": 1,
+            "close_ticket": 1,
+            "reopen_ticket": 1,
+        },
+        "Internal Billing & Accounts": {
+            "internal_only": 1,
+            "create_ticket": 1,
+            "reply_ticket": 1,
+            "view_company_tickets": 1,
+            "view_invoices": 1,
+            "view_payments": 1,
+            "view_quotations": 1,
+            "view_orders": 1,
+        },
+        "Internal Sales Commercial": {
+            "internal_only": 1,
+            "create_ticket": 1,
+            "reply_ticket": 1,
+            "view_company_tickets": 1,
+            "view_quotations": 1,
+            "view_orders": 1,
+        },
+        "Internal Projects AMC": {
+            "internal_only": 1,
+            "create_ticket": 1,
+            "reply_ticket": 1,
+            "view_company_tickets": 1,
+            "view_projects": 1,
+            "view_amc": 1,
+        },
     }
     for group_name, values in groups.items():
         if frappe.db.exists("Portal Permission Group", group_name):
@@ -127,6 +209,28 @@ def ensure_permission_groups():
         for fieldname, value in values.items():
             if hasattr(doc, fieldname):
                 setattr(doc, fieldname, value)
+        doc.insert(ignore_permissions=True)
+
+
+def ensure_service_departments():
+    if not frappe.db.exists("DocType", "Portal Service Department"):
+        return
+    departments = {
+        "Technical Support": "Technical Support",
+        "NOC / Network": "NOC / Network",
+        "Billing & Accounts": "Billing & Accounts",
+        "Sales / Commercial": "Sales / Commercial",
+        "Projects / AMC": "Projects / AMC",
+        "General Support": "General Support",
+    }
+    for name, category in departments.items():
+        if frappe.db.exists("Portal Service Department", name):
+            continue
+        doc = frappe.new_doc("Portal Service Department")
+        doc.department_name = name
+        doc.category = category
+        doc.enabled = 1
+        doc.route_to_team = name
         doc.insert(ignore_permissions=True)
 
 

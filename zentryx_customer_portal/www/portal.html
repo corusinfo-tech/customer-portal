@@ -73,13 +73,28 @@
         <div class="zcp-panel-head"><h2>{{ _("Create Ticket") }}</h2></div>
         <form id="zcp-ticket-form" class="zcp-form">
           <input name="subject" placeholder="{{ _('Subject') }}" required>
-          <input name="customer" placeholder="{{ _('Customer ID for staff users') }}">
+          <select name="customer" id="zcp-ticket-customer">
+            <option value="">{{ _("Select customer") }}</option>
+          </select>
+          <select name="service_department" id="zcp-service-department" required>
+            <option value="">{{ _("Select service department") }}</option>
+          </select>
           <select name="priority">
             <option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option>
           </select>
           <textarea name="description" placeholder="{{ _('Describe the issue') }}" rows="6" required></textarea>
           <button class="zcp-primary" type="submit">{{ _("Create Ticket") }}</button>
         </form>
+        <div class="zcp-dashboard-layout zcp-ticket-assist">
+          <div>
+            <h2>{{ _("Previous Tickets") }}</h2>
+            <div id="zcp-previous-tickets" class="zcp-table"></div>
+          </div>
+          <div>
+            <h2>{{ _("Possible Similar Tickets") }}</h2>
+            <div id="zcp-similar-tickets" class="zcp-table"></div>
+          </div>
+        </div>
       </div>
 
       <div class="zcp-panel d-none" data-panel="tickets">

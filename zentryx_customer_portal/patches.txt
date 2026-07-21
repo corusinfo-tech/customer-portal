@@ -1,1 +1,4 @@
 # Patches run in order by Frappe during migrate.
+
+[post_model_sync]
+zentryx_customer_portal.patches.v0_4.setup_department_access

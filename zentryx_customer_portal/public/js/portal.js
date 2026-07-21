@@ -3,6 +3,7 @@ class ZentryxPortal {
     this.root = document.querySelector(".zcp-shell");
     if (!this.root) return;
     this.chart = null;
+    this.context = null;
     this.bindNavigation();
     this.bindTheme();
     this.bindSearch();
@@ -47,6 +48,15 @@ class ZentryxPortal {
   }
 
   bindTicketForm() {
+    document.getElementById("zcp-ticket-customer")?.addEventListener("change", () => this.loadPreviousTickets());
+    document.getElementById("zcp-service-department")?.addEventListener("change", () => {
+      this.loadPreviousTickets();
+      this.loadSimilarTickets();
+    });
+    document.querySelector("#zcp-ticket-form [name='subject']")?.addEventListener("input", () => {
+      clearTimeout(this.similarTimer);
+      this.similarTimer = setTimeout(() => this.loadSimilarTickets(), 400);
+    });
     document.getElementById("zcp-ticket-form")?.addEventListener("submit", async (event) => {
       event.preventDefault();
       const form = new FormData(event.currentTarget);
@@ -63,21 +73,40 @@ class ZentryxPortal {
   }
 
   async load() {
+    this.context = await this.call("portal_context");
+    this.applyNavigation();
     const summary = await this.call("dashboard_summary");
     this.renderSummary(summary);
     this.renderActivities(summary.recent_activities || []);
     this.renderChart(summary);
     document.getElementById("zcp-customer-name").textContent = summary.customer_name || "Customer Portal";
     await Promise.all([
-      this.loadTickets(),
-      this.loadQuotations(),
-      this.loadInvoices(),
-      this.loadProjects(),
-      this.loadAmc(),
-      this.loadNetwork(),
-      this.loadNotifications(),
-      this.loadAdministration(),
+      this.safeLoad("tickets", () => this.loadTickets()),
+      this.safeLoad("quotations", () => this.loadQuotations()),
+      this.safeLoad("invoices", () => this.loadInvoices()),
+      this.safeLoad("projects", () => this.loadProjects()),
+      this.safeLoad("amc", () => this.loadAmc()),
+      this.safeLoad("network", () => this.loadNetwork()),
+      this.safeLoad("dashboard", () => this.loadNotifications()),
+      this.safeLoad("admin", () => this.loadAdministration()),
+      this.safeLoad("support", () => this.loadTicketControls()),
     ]);
+  }
+
+  applyNavigation() {
+    const allowed = new Set(this.context?.navigation || []);
+    document.querySelectorAll(".zcp-nav button").forEach((button) => {
+      button.hidden = !allowed.has(button.dataset.view);
+    });
+  }
+
+  async safeLoad(view, loader) {
+    if (this.context?.navigation && !this.context.navigation.includes(view)) return;
+    try {
+      await loader();
+    } catch {
+      // Authorization is enforced server-side; failed optional modules should not break portal startup.
+    }
   }
 
   renderSummary(summary) {
@@ -162,6 +191,66 @@ class ZentryxPortal {
   async loadNotifications() {
     const data = await this.call("notifications");
     document.getElementById("zcp-unread").textContent = data.unread_count || 0;
+  }
+
+  async loadTicketControls() {
+    await Promise.all([this.loadSelectableCustomers(), this.loadServiceDepartments()]);
+  }
+
+  async loadSelectableCustomers() {
+    const select = document.getElementById("zcp-ticket-customer");
+    if (!select) return;
+    try {
+      const rows = await this.call("selectable_customers");
+      select.innerHTML = `<option value="">Select customer</option>` + rows
+        .map((row) => `<option value="${this.escape(row.name)}">${this.escape(row.customer_name)} (${this.escape(row.erpnext_customer)})</option>`)
+        .join("");
+      select.hidden = rows.length === 0;
+    } catch {
+      select.hidden = true;
+    }
+  }
+
+  async loadServiceDepartments() {
+    const select = document.getElementById("zcp-service-department");
+    if (!select) return;
+    const rows = await this.call("service_departments");
+    select.innerHTML = `<option value="">Select service department</option>` + rows
+      .map((row) => `<option value="${this.escape(row.name)}">${this.escape(row.department_name)}</option>`)
+      .join("");
+  }
+
+  async loadPreviousTickets() {
+    const target = document.getElementById("zcp-previous-tickets");
+    const customer = document.getElementById("zcp-ticket-customer")?.value;
+    if (!target || !customer) return;
+    try {
+      const rows = await this.call("previous_tickets", {
+        customer,
+        service_department: document.getElementById("zcp-service-department")?.value,
+      });
+      target.innerHTML = rows.length
+        ? rows.map((row) => this.row(row.subject || row.name, row.status, row.service_department || row.priority)).join("")
+        : `<div class="zcp-empty">No previous tickets found.</div>`;
+    } catch {
+      target.innerHTML = "";
+    }
+  }
+
+  async loadSimilarTickets() {
+    const target = document.getElementById("zcp-similar-tickets");
+    const customer = document.getElementById("zcp-ticket-customer")?.value;
+    const service_department = document.getElementById("zcp-service-department")?.value;
+    const subject = document.querySelector("#zcp-ticket-form [name='subject']")?.value;
+    if (!target || !customer || !service_department || !subject || subject.length < 4) return;
+    try {
+      const rows = await this.call("similar_tickets", { customer, service_department, subject });
+      target.innerHTML = rows.length
+        ? rows.map((row) => this.row(row.subject || row.name, `${row.status} · ${Math.round(row.similarity_score * 100)}%`, `<a href="${row.view_url}">View</a>`)).join("")
+        : `<div class="zcp-empty">No similar tickets found.</div>`;
+    } catch {
+      target.innerHTML = "";
+    }
   }
 
   bindAdministration() {

@@ -5,10 +5,11 @@
   "creation": "2026-07-11 00:00:00.000000",
   "doctype": "DocType",
   "engine": "InnoDB",
-  "field_order": ["group_name", "enabled", "ticket_section", "create_ticket", "reply_ticket", "upload_attachments", "view_own_tickets", "view_department_tickets", "view_company_tickets", "assign_ticket", "escalate_ticket", "close_ticket", "merge_ticket", "reopen_ticket", "knowledge_section", "view_knowledge_base", "download_documents", "commercial_section", "view_quotations", "view_orders", "view_invoices", "view_payments", "project_section", "view_projects", "view_tasks", "view_timesheets", "report_section", "view_reports", "view_sla_reports", "view_customer_analytics", "admin_section", "manage_staff", "manage_departments", "manage_permissions", "manage_notifications", "read_only"],
+  "field_order": ["group_name", "enabled", "internal_only", "ticket_section", "create_ticket", "reply_ticket", "upload_attachments", "view_own_tickets", "view_department_tickets", "view_company_tickets", "assign_ticket", "escalate_ticket", "close_ticket", "merge_ticket", "reopen_ticket", "knowledge_section", "view_knowledge_base", "download_documents", "commercial_section", "view_quotations", "view_orders", "view_invoices", "view_payments", "project_section", "view_projects", "view_tasks", "view_timesheets", "view_amc", "report_section", "view_reports", "view_sla_reports", "view_customer_analytics", "admin_section", "manage_staff", "manage_departments", "manage_permissions", "manage_notifications", "manage_internal_users", "read_only"],
   "fields": [
     {"fieldname": "group_name", "fieldtype": "Data", "in_list_view": 1, "label": "Group Name", "reqd": 1, "unique": 1},
     {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Enabled"},
+    {"fieldname": "internal_only", "fieldtype": "Check", "in_list_view": 1, "label": "Internal Only"},
     {"fieldname": "ticket_section", "fieldtype": "Section Break", "label": "Tickets"},
     {"fieldname": "create_ticket", "fieldtype": "Check", "label": "Create Ticket"},
     {"fieldname": "reply_ticket", "fieldtype": "Check", "label": "Reply to Ticket"},
@@ -33,6 +34,7 @@
     {"fieldname": "view_projects", "fieldtype": "Check", "label": "View Projects"},
     {"fieldname": "view_tasks", "fieldtype": "Check", "label": "View Tasks"},
     {"fieldname": "view_timesheets", "fieldtype": "Check", "label": "View Timesheets"},
+    {"fieldname": "view_amc", "fieldtype": "Check", "label": "View AMC Records"},
     {"fieldname": "report_section", "fieldtype": "Section Break", "label": "Reports"},
     {"fieldname": "view_reports", "fieldtype": "Check", "label": "View Reports"},
     {"fieldname": "view_sla_reports", "fieldtype": "Check", "label": "SLA Reports"},
@@ -42,6 +44,7 @@
     {"fieldname": "manage_departments", "fieldtype": "Check", "label": "Manage Departments"},
     {"fieldname": "manage_permissions", "fieldtype": "Check", "label": "Manage Permissions"},
     {"fieldname": "manage_notifications", "fieldtype": "Check", "label": "Manage Notifications"},
+    {"fieldname": "manage_internal_users", "fieldtype": "Check", "label": "Manage Internal Portal Users"},
     {"fieldname": "read_only", "fieldtype": "Check", "label": "Read Only"}
   ],
   "links": [],
