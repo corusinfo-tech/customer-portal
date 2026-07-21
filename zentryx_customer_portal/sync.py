@@ -71,18 +71,20 @@ def sync_contacts():
         if not portal_customer:
             continue
 
-        portal_user_name = frappe.db.get_value("Portal User", {"email": email}, "name")
+        user = frappe.db.get_value("User", {"email": email}, "name")
+        portal_user_name = _portal_user_name(email, user)
         if portal_user_name:
             portal_user = frappe.get_doc("Portal User", portal_user_name)
             updated += 1
         else:
             portal_user = frappe.new_doc("Portal User")
             portal_user.email = email
-            portal_user.user = frappe.db.get_value("User", {"email": email}, "name")
             portal_user.user_type = "Customer Staff"
             portal_user.enabled = 1
             created += 1
 
+        portal_user.email = email
+        portal_user.user = user
         portal_user.full_name = contact.full_name or contact.first_name or email
         portal_user.portal_customer = portal_customer
         portal_user.contact = contact.name
@@ -146,6 +148,13 @@ def _contact_customer(contact_name):
         {"parenttype": "Contact", "parent": contact_name, "link_doctype": "Customer"},
         "link_name",
     )
+
+
+def _portal_user_name(email, user=None):
+    portal_user_name = frappe.db.get_value("Portal User", {"email": email}, "name")
+    if portal_user_name or not user:
+        return portal_user_name
+    return frappe.db.get_value("Portal User", {"user": user}, "name")
 
 
 def _default_permission_group():
