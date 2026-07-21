@@ -1,0 +1,31 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "creation": "2026-07-09 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["customer", "report_period", "sla_target", "achieved_uptime", "average_response_time", "breaches", "report_file"],
+  "fields": [
+    {"fieldname": "customer", "fieldtype": "Link", "in_list_view": 1, "label": "Customer", "options": "Customer", "reqd": 1},
+    {"fieldname": "report_period", "fieldtype": "Data", "in_list_view": 1, "label": "Report Period", "reqd": 1},
+    {"fieldname": "sla_target", "fieldtype": "Percent", "label": "SLA Target"},
+    {"fieldname": "achieved_uptime", "fieldtype": "Percent", "in_list_view": 1, "label": "Achieved Uptime"},
+    {"fieldname": "average_response_time", "fieldtype": "Duration", "label": "Average Response Time"},
+    {"fieldname": "breaches", "fieldtype": "Int", "label": "Breaches"},
+    {"fieldname": "report_file", "fieldtype": "Attach", "label": "Report File"}
+  ],
+  "links": [],
+  "modified": "2026-07-09 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zentryx Customer Portal",
+  "name": "SLA Report",
+  "owner": "Administrator",
+  "permissions": [
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+    {"read": 1, "role": "Customer"}
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": []
+}
+
