@@ -1,0 +1,33 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "field:user",
+  "creation": "2026-07-22 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["user", "employee_name", "enabled", "service_department", "permission_group", "access_all_customers", "allowed_customers", "notes"],
+  "fields": [
+    {"fieldname": "user", "fieldtype": "Link", "in_list_view": 1, "label": "Frappe User", "options": "User", "reqd": 1, "unique": 1},
+    {"fieldname": "employee_name", "fieldtype": "Data", "in_list_view": 1, "label": "Employee Name", "reqd": 1},
+    {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "in_list_view": 1, "label": "Enabled"},
+    {"fieldname": "service_department", "fieldtype": "Link", "in_list_view": 1, "label": "Service Department", "options": "Portal Service Department", "reqd": 1},
+    {"fieldname": "permission_group", "fieldtype": "Link", "in_list_view": 1, "label": "Permission Group", "options": "Portal Permission Group", "reqd": 1},
+    {"fieldname": "access_all_customers", "fieldtype": "Check", "label": "Access All Customers"},
+    {"fieldname": "allowed_customers", "fieldtype": "Table", "label": "Allowed Customers", "options": "Portal Internal Allowed Customer"},
+    {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"}
+  ],
+  "links": [],
+  "modified": "2026-07-22 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zentryx Customer Portal",
+  "name": "Internal Portal User",
+  "owner": "Administrator",
+  "permissions": [
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Customer Portal Manager", "share": 1, "write": 1}
+  ],
+  "sort_field": "user",
+  "sort_order": "ASC",
+  "states": []
+}
+

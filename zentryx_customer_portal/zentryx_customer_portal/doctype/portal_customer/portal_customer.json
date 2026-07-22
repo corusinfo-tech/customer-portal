@@ -1,0 +1,36 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "creation": "2026-07-11 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["erpnext_customer", "customer_name", "status", "customer_group", "territory", "primary_contact", "primary_email", "primary_mobile", "sync_section", "last_synced_on", "sync_status", "notes"],
+  "fields": [
+    {"fieldname": "erpnext_customer", "fieldtype": "Link", "in_list_view": 1, "label": "ERPNext Customer", "options": "Customer", "unique": 1},
+    {"fieldname": "customer_name", "fieldtype": "Data", "in_list_view": 1, "label": "Customer Name", "reqd": 1},
+    {"default": "Active", "fieldname": "status", "fieldtype": "Select", "in_list_view": 1, "label": "Status", "options": "Active\nDisabled\nSuspended", "reqd": 1},
+    {"fieldname": "customer_group", "fieldtype": "Link", "label": "Customer Group", "options": "Customer Group"},
+    {"fieldname": "territory", "fieldtype": "Link", "label": "Territory", "options": "Territory"},
+    {"fieldname": "primary_contact", "fieldtype": "Link", "label": "Primary Contact", "options": "Contact"},
+    {"fieldname": "primary_email", "fieldtype": "Data", "label": "Primary Email", "options": "Email"},
+    {"fieldname": "primary_mobile", "fieldtype": "Data", "label": "Primary Mobile"},
+    {"fieldname": "sync_section", "fieldtype": "Section Break", "label": "Synchronization"},
+    {"fieldname": "last_synced_on", "fieldtype": "Datetime", "label": "Last Synced On", "read_only": 1},
+    {"fieldname": "sync_status", "fieldtype": "Select", "label": "Sync Status", "options": "\nPending\nSynced\nFailed"},
+    {"fieldname": "notes", "fieldtype": "Small Text", "label": "Notes"}
+  ],
+  "links": [],
+  "modified": "2026-07-11 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zentryx Customer Portal",
+  "name": "Portal Customer",
+  "owner": "Administrator",
+  "permissions": [
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Customer Portal Manager", "share": 1, "write": 1}
+  ],
+  "sort_field": "customer_name",
+  "sort_order": "ASC",
+  "states": []
+}
+

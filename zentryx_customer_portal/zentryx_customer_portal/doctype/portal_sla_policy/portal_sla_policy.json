@@ -1,0 +1,32 @@
+{
+  "actions": [],
+  "allow_rename": 1,
+  "creation": "2026-07-11 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["policy_name", "tier", "enabled", "first_response_time", "resolution_time", "escalation_time", "working_hours", "holiday_list"],
+  "fields": [
+    {"fieldname": "policy_name", "fieldtype": "Data", "in_list_view": 1, "label": "Policy Name", "reqd": 1, "unique": 1},
+    {"fieldname": "tier", "fieldtype": "Select", "in_list_view": 1, "label": "Tier", "options": "Platinum\nGold\nSilver\nBronze\nCustom", "reqd": 1},
+    {"default": "1", "fieldname": "enabled", "fieldtype": "Check", "label": "Enabled"},
+    {"fieldname": "first_response_time", "fieldtype": "Duration", "label": "First Response Time"},
+    {"fieldname": "resolution_time", "fieldtype": "Duration", "label": "Resolution Time"},
+    {"fieldname": "escalation_time", "fieldtype": "Duration", "label": "Escalation Time"},
+    {"fieldname": "working_hours", "fieldtype": "Data", "label": "Working Hours"},
+    {"fieldname": "holiday_list", "fieldtype": "Link", "label": "Holiday List", "options": "Holiday List"}
+  ],
+  "links": [],
+  "modified": "2026-07-11 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zentryx Customer Portal",
+  "name": "Portal SLA Policy",
+  "owner": "Administrator",
+  "permissions": [
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Customer Portal Manager", "share": 1, "write": 1}
+  ],
+  "sort_field": "policy_name",
+  "sort_order": "ASC",
+  "states": []
+}
+

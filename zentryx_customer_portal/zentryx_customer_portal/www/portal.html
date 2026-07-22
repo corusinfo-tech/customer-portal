@@ -29,6 +29,8 @@
       <button data-view="network">{{ _("Network") }}</button>
       <button data-view="reports">{{ _("Reports") }}</button>
       <button data-view="documents">{{ _("Documents") }}</button>
+      <button data-view="admin">{{ _("Customer Admin") }}</button>
+      <button data-view="settings">{{ _("Settings") }}</button>
       <button data-view="profile">{{ _("Profile") }}</button>
       <a href="/?cmd=web_logout">{{ _("Logout") }}</a>
     </nav>
@@ -71,12 +73,28 @@
         <div class="zcp-panel-head"><h2>{{ _("Create Ticket") }}</h2></div>
         <form id="zcp-ticket-form" class="zcp-form">
           <input name="subject" placeholder="{{ _('Subject') }}" required>
+          <select name="customer" id="zcp-ticket-customer">
+            <option value="">{{ _("Select customer") }}</option>
+          </select>
+          <select name="service_department" id="zcp-service-department" required>
+            <option value="">{{ _("Select service department") }}</option>
+          </select>
           <select name="priority">
             <option>Low</option><option selected>Medium</option><option>High</option><option>Urgent</option>
           </select>
           <textarea name="description" placeholder="{{ _('Describe the issue') }}" rows="6" required></textarea>
           <button class="zcp-primary" type="submit">{{ _("Create Ticket") }}</button>
         </form>
+        <div class="zcp-dashboard-layout zcp-ticket-assist">
+          <div>
+            <h2>{{ _("Previous Tickets") }}</h2>
+            <div id="zcp-previous-tickets" class="zcp-table"></div>
+          </div>
+          <div>
+            <h2>{{ _("Possible Similar Tickets") }}</h2>
+            <div id="zcp-similar-tickets" class="zcp-table"></div>
+          </div>
+        </div>
       </div>
 
       <div class="zcp-panel d-none" data-panel="tickets">
@@ -123,6 +141,23 @@
       <div class="zcp-panel d-none" data-panel="payments"><div class="zcp-empty">{{ _("Payment entries and receipts are available through customer-scoped APIs.") }}</div></div>
       <div class="zcp-panel d-none" data-panel="reports"><div class="zcp-empty">{{ _("SLA reports and uploaded report files appear under Documents.") }}</div></div>
       <div class="zcp-panel d-none" data-panel="documents"><div class="zcp-empty">{{ _("Customer documents include invoices, quotations, contracts, project files, reports and configuration backups.") }}</div></div>
+      <div class="zcp-panel d-none" data-panel="admin">
+        <div class="zcp-panel-head">
+          <h2>{{ _("Customer Administration") }}</h2>
+          <button class="zcp-primary" id="zcp-sync" type="button">{{ _("Sync Customers") }}</button>
+        </div>
+        <div class="zcp-dashboard-layout">
+          <div>
+            <h2>{{ _("Customers") }}</h2>
+            <div id="zcp-customers" class="zcp-table"></div>
+          </div>
+          <div>
+            <h2>{{ _("Staff") }}</h2>
+            <div id="zcp-staff" class="zcp-table"></div>
+          </div>
+        </div>
+      </div>
+      <div class="zcp-panel d-none" data-panel="settings"><div class="zcp-empty">{{ _("Portal settings, ticket settings, SLA policies, security, notification channels and branding are managed from Customer Portal Settings in Desk.") }}</div></div>
       <div class="zcp-panel d-none" data-panel="profile"><div class="zcp-empty">{{ _("Update contact details, password and notification preferences from your account profile.") }}</div></div>
     </section>
   </section>
@@ -130,4 +165,3 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js" defer></script>
 {% endblock %}
-

@@ -1,9 +1,9 @@
 [
   {
     "doctype": "Role",
+    "name": "Customer Portal Manager",
     "role_name": "Customer Portal Manager",
     "desk_access": 1,
     "is_custom": 1
   }
 ]
-

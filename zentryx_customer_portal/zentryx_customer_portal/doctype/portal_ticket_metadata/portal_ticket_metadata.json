@@ -1,0 +1,40 @@
+{
+  "actions": [],
+  "allow_rename": 0,
+  "creation": "2026-07-22 00:00:00.000000",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": ["ticket_doctype", "ticket", "erpnext_customer", "portal_customer", "service_department", "customer_department", "requesting_user", "created_by_type", "internal_created_by", "permission_context", "merge_section", "duplicate_status", "primary_ticket", "merged_by", "merged_on", "merge_reason"],
+  "fields": [
+    {"fieldname": "ticket_doctype", "fieldtype": "Link", "in_list_view": 1, "label": "Ticket DocType", "options": "DocType", "reqd": 1},
+    {"fieldname": "ticket", "fieldtype": "Dynamic Link", "in_list_view": 1, "label": "Ticket", "options": "ticket_doctype", "reqd": 1, "unique": 1},
+    {"fieldname": "erpnext_customer", "fieldtype": "Link", "in_list_view": 1, "label": "ERPNext Customer", "options": "Customer", "reqd": 1},
+    {"fieldname": "portal_customer", "fieldtype": "Link", "label": "Portal Customer", "options": "Portal Customer", "reqd": 1},
+    {"fieldname": "service_department", "fieldtype": "Link", "in_list_view": 1, "label": "Service Department", "options": "Portal Service Department", "reqd": 1},
+    {"fieldname": "customer_department", "fieldtype": "Link", "label": "Customer Department", "options": "Portal Department"},
+    {"fieldname": "requesting_user", "fieldtype": "Link", "label": "Requesting User", "options": "User", "reqd": 1},
+    {"fieldname": "created_by_type", "fieldtype": "Select", "label": "Created By Type", "options": "Customer\nInternal", "reqd": 1},
+    {"fieldname": "internal_created_by", "fieldtype": "Link", "label": "Internal Created By", "options": "User"},
+    {"fieldname": "permission_context", "fieldtype": "Code", "label": "Permission Context", "options": "JSON"},
+    {"fieldname": "merge_section", "fieldtype": "Section Break", "label": "Merge"},
+    {"default": "Open", "fieldname": "duplicate_status", "fieldtype": "Select", "in_list_view": 1, "label": "Duplicate Status", "options": "Open\nPossible Duplicate\nMerged"},
+    {"fieldname": "primary_ticket", "fieldtype": "Dynamic Link", "label": "Primary Ticket", "options": "ticket_doctype"},
+    {"fieldname": "merged_by", "fieldtype": "Link", "label": "Merged By", "options": "User"},
+    {"fieldname": "merged_on", "fieldtype": "Datetime", "label": "Merged On"},
+    {"fieldname": "merge_reason", "fieldtype": "Small Text", "label": "Merge Reason"}
+  ],
+  "links": [],
+  "modified": "2026-07-22 00:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Zentryx Customer Portal",
+  "name": "Portal Ticket Metadata",
+  "owner": "Administrator",
+  "permissions": [
+    {"create": 1, "delete": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "System Manager", "share": 1, "write": 1},
+    {"create": 1, "email": 1, "export": 1, "print": 1, "read": 1, "report": 1, "role": "Customer Portal Manager", "share": 1, "write": 1}
+  ],
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": []
+}
+
